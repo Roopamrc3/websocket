@@ -69,7 +69,7 @@ server {
 # HTTPS Server
 server {
   listen      443 default_server ssl;
-  server_name domain.com;
+  server_name app_domain.com;
   root        /path/to/app_directory/public; # e.g. /var/www/app_name/public
 
   location / {
