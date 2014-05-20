@@ -1,0 +1,97 @@
+=========================
+# /etc/nginx/nginx.conf
+=========================
+
+user www-data;
+worker_processes 4;
+pid /var/run/nginx.pid;
+
+events {
+  worker_connections 768;
+}
+
+error_log /etc/nginx/logs/nginx.error.log debug;
+
+http {
+  # Basic Settings
+  sendfile            on;
+  tcp_nopush          on;
+  tcp_nodelay         on;
+  keepalive_timeout   65;
+  types_hash_max_size 2048;
+
+  # Media Settings
+  include      /etc/nginx/mime.types;
+  default_type application/octet-stream;
+
+  # Logging Settings
+  access_log /var/log/nginx/access.log;
+  error_log  /var/log/nginx/error.log;
+
+  # Gzip Settings
+  gzip         on;
+  gzip_disable "msie6";
+
+  # SSL Credentials
+  ssl_certificate     /path/to/server.crt;
+  ssl_certificate_key /path/to/server.key;
+
+  # SSL Session Caching (default = none)
+  ssl_session_cache   shared:SSL:10m;
+  ssl_session_timeout 10m;
+
+  # Virtual Host Configs
+  include /etc/nginx/conf.d/*.conf;
+  include /etc/nginx/sites-enabled/*.conf;
+}
+
+============================================
+# /etc/nginx/sites-available/app_name.conf
+============================================
+
+# App Server (Puma)
+upstream app_name {
+  server domain.com:9292; # 9292 is the default port for Puma
+}
+
+# Standalone Websocket Server (Thin)
+upstream websocket_server {
+  server app_domain.com:3001; # 3001 is the default port for Thin when using websocket_rails standalone server
+}
+
+# HTTP Server
+server {
+  listen 80   default_server;
+  server_name app_domain.com;
+  return      301 https://$host$request_uri;
+}
+
+# HTTPS Server
+server {
+  listen      443 default_server ssl;
+  server_name domain.com;
+  root        /path/to/app_directory/public; # e.g. /var/www/app_name/public
+
+  location / {
+    proxy_pass       http://app_name;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+
+  # websocket_rails uses the '/websocket' route
+  location /websocket {
+    proxy_pass         http://websocket_server/websocket;
+    proxy_http_version 1.1;
+    proxy_set_header   Upgrade $http_upgrade;
+    proxy_set_header   Connection "upgrade";
+    proxy_set_header   Host $host;
+  }
+}
+
+==============================================================
+# Create symlink with sites-enabled folder and restart nginx
+==============================================================
+
+>> sudo ln -s /etc/nginx/sites-available/app_name.conf /etc/nginx/sites-enabled/app_name.conf
+# Note: can use force option to remove existing symlink (i.e. "sudo ln -sf ...")
+>> sudo service nginx restart
