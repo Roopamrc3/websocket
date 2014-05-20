@@ -92,6 +92,5 @@ server {
 # Create symlink with sites-enabled folder and restart nginx
 ==============================================================
 
->> sudo ln -s /etc/nginx/sites-available/app_name.conf /etc/nginx/sites-enabled/app_name.conf
-# Note: can use force option to remove existing symlink (i.e. "sudo ln -sf ...")
+>> sudo ln -nfs /etc/nginx/sites-available/app_name.conf /etc/nginx/sites-enabled/app_name.conf
 >> sudo service nginx restart
